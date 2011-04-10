@@ -91,9 +91,9 @@ public class PayDay extends JavaPlugin {
                 boolean overwrite = (args.length == 2 && (args[1].equalsIgnoreCase("overwrite") || args[1].equalsIgnoreCase("ow")));
                 for (String key: ic.getAccounts().keySet()) {
                     if (conf.getString("players."+key) == null || overwrite) {
-                        conf.setProperty("players."+key, permissions.getGroup("world", key));
-                        if (conf.getString("groups."+permissions.getGroup("world", key)) == null) {
-                            conf.setProperty("groups."+permissions.getGroup("world", key), 0);
+                        conf.setProperty("players."+key, permissions.getGroup("world", key).toLowerCase());
+                        if (conf.getString("groups."+permissions.getGroup("world", key).toLowerCase()) == null) {
+                            conf.setProperty("groups."+permissions.getGroup("world", key).toLowerCase(), 0);
                         }
                     }
                 }
