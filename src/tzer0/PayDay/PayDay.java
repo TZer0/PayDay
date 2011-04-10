@@ -141,10 +141,11 @@ public class PayDay extends JavaPlugin {
                         }
                     }
                 } else if (args[1].equalsIgnoreCase("player") || args[1].equalsIgnoreCase("pl")) {
-                    if (full.contains(args[2])) {
-                        pay.add(args[2]);
+                    if (full.contains(uargs[2])) {
+                        pay.add(uargs[2]);
                     } else {
                         sender.sendMessage(ChatColor.RED + "No such player!");
+                        return true;
                     }
                 } else {
                     sender.sendMessage(ChatColor.RED + "Invalid 3rd parameter, must be group or player");
