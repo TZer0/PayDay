@@ -82,7 +82,7 @@ public class PayDay extends JavaPlugin {
             }
             return true;
 
-        } else if (args.length == 1 && (args[0].equalsIgnoreCase("sync") || (args[0].equalsIgnoreCase("sy")))) { 
+        } else if (args.length >= 1 && (args[0].equalsIgnoreCase("sync") || (args[0].equalsIgnoreCase("sy")))) { 
             // Imports data from Permissions and iConomy.
             Bank ic = iConomy.getBank();
             if (permissions == null) {
@@ -92,6 +92,9 @@ public class PayDay extends JavaPlugin {
                 for (String key: ic.getAccounts().keySet()) {
                     if (conf.getString("players."+key) == null || overwrite) {
                         conf.setProperty("players."+key, permissions.getGroup("world", key));
+                        if (conf.getString("groups."+permissions.getGroup("world", key)) == null) {
+                            conf.setProperty("groups."+permissions.getGroup("world", key), 0);
+                        }
                     }
                 }
                 conf.save();
