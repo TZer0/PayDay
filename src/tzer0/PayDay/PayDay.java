@@ -60,7 +60,7 @@ public class PayDay extends JavaPlugin {
                 sender.sendMessage(ChatColor.YELLOW+"payday group/player name - pays a specific group or player");
                 sender.sendMessage(ChatColor.YELLOW+"set group name value - creates a group with earns value per payday");
                 sender.sendMessage(ChatColor.YELLOW+"set player name groupname - assigns a player to a group");
-                sender.sendMessage(ChatColor.YELLOW+"mv groupname1 groupname2 - moves all players from one group to another");
+                sender.sendMessage(ChatColor.YELLOW+"move groupname1 groupname2 - moves all players from one group to another");
                 sender.sendMessage(ChatColor.YELLOW+"delete player/group name - deletes a group/player");
                 sender.sendMessage(ChatColor.YELLOW+"sync [overwrite] - imports players and groups from iConomy and Permissions");
                 sender.sendMessage(ChatColor.RED+"REMEMBER: player-names are CASE-SENSITIVE");
