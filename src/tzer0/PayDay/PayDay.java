@@ -45,9 +45,10 @@ public class PayDay extends JavaPlugin {
             uargs[i] = uargs[i].replace(".", "");
             args[i] = uargs[i].toLowerCase();
         }
-        if (args.length == 0 || (args.length >= 1 && args[0].equalsIgnoreCase("help"))) {
+        int l = args.length;
+        if (l == 0 || (l >= 1 && args[0].equalsIgnoreCase("help"))) {
             int page = 1;
-            if (args.length == 2) {                
+            if (l == 2) {                
                 page = toInt(args[1], sender);
             }
             sender.sendMessage(ChatColor.GREEN+"PayDay " + pdfFile.getVersion() + " by TZer0");
@@ -62,6 +63,7 @@ public class PayDay extends JavaPlugin {
                 sender.sendMessage(ChatColor.YELLOW+"set player name groupname - assigns a player to a group");
                 sender.sendMessage(ChatColor.YELLOW+"move groupname1 groupname2 - moves all players from one group to another");
                 sender.sendMessage(ChatColor.YELLOW+"delete player/group name - deletes a group/player");
+                sender.sendMessage(ChatColor.YELLOW+"searchdelete player/group name - wildcard delete");
                 sender.sendMessage(ChatColor.YELLOW+"sync [overwrite] - imports players and groups from iConomy and Permissions");
                 sender.sendMessage(ChatColor.RED+"REMEMBER: player-names are CASE-SENSITIVE");
                 sender.sendMessage(ChatColor.YELLOW+"help 2 for aliases (very useful)");
@@ -70,7 +72,7 @@ public class PayDay extends JavaPlugin {
                 sender.sendMessage(ChatColor.YELLOW+"player = pl, players = pl, groups = gr");
                 sender.sendMessage(ChatColor.YELLOW+"group = gr, checkerrors = ce, payday = pd");
                 sender.sendMessage(ChatColor.YELLOW+"set = s, delete = d, move = mv");
-                sender.sendMessage(ChatColor.YELLOW+"sync = sy, overwrite = ow");
+                sender.sendMessage(ChatColor.YELLOW+"sync = sy, overwrite = ow, searchdelete = sd");
                 sender.sendMessage(ChatColor.YELLOW+"Example usage:");
                 sender.sendMessage(ChatColor.YELLOW+"/pd s gr epicgroup 10000");
                 sender.sendMessage(ChatColor.YELLOW+"/pd s pl TZer0 epicgroup");
@@ -82,15 +84,15 @@ public class PayDay extends JavaPlugin {
             }
             return true;
 
-        } else if (args.length >= 1 && (args[0].equalsIgnoreCase("sync") || (args[0].equalsIgnoreCase("sy")))) { 
+        } else if (l >= 1 && (args[0].equalsIgnoreCase("sync") || (args[0].equalsIgnoreCase("sy")))) { 
             // Imports data from Permissions and iConomy.
             Bank ic = iConomy.getBank();
             if (permissions == null) {
                 sender.sendMessage(ChatColor.RED + "Permissions unavailable - aborting.");
             } else {
-                boolean overwrite = (args.length == 2 && (args[1].equalsIgnoreCase("overwrite") || args[1].equalsIgnoreCase("ow")));
+                boolean overwrite = (l == 2 && (args[1].equalsIgnoreCase("overwrite") || args[1].equalsIgnoreCase("ow")));
                 for (String key: ic.getAccounts().keySet()) {
-                    if (key.contains("town-")) {
+                    if (key.contains("town-") || key.contains("nation-")) {
                         continue;
                     }
                     if (conf.getString("players."+key) == null || overwrite) {
@@ -104,28 +106,28 @@ public class PayDay extends JavaPlugin {
                 sender.sendMessage(ChatColor.GREEN+"Done!");
             }
             return true;
-        } else if (args.length >= 1 && (args[0].equalsIgnoreCase("checkerrors") || args[0].equalsIgnoreCase("ce"))) {
+        } else if (l >= 1 && (args[0].equalsIgnoreCase("checkerrors") || args[0].equalsIgnoreCase("ce"))) {
             // Utility - checks for errors while not running payday.
             if (!checkErrors(sender, iConomy.getBank())) {
                 sender.sendMessage(ChatColor.GREEN+"No errors found.");
             } else {
                 sender.sendMessage(ChatColor.RED + "Errors found, fix them before running payday");
             }
-        } else if (args.length >= 1 && (args[0].replace("players", "player").equalsIgnoreCase("player") || args[0].equalsIgnoreCase("pl"))) {
+        } else if (l >= 1 && (args[0].replace("players", "player").equalsIgnoreCase("player") || args[0].equalsIgnoreCase("pl"))) {
             // Lists players
             int page = 0;
-            if (args.length == 2) {
+            if (l == 2) {
                 page = toInt(args[1], sender);
             }
             page(page, sender, "Player");
-        } else if (args.length >= 1 && (args[0].replace("groups", "group").equalsIgnoreCase("group") || args[0].equalsIgnoreCase("gr"))) {
+        } else if (l >= 1 && (args[0].replace("groups", "group").equalsIgnoreCase("group") || args[0].equalsIgnoreCase("gr"))) {
             // Lists groups
             int page = 0;
-            if (args.length == 2) {
+            if (l == 2) {
                 page = toInt(args[2], sender);
             }
             page(page, sender, "Group");
-        } else if (args.length >= 1 && (args[0].equalsIgnoreCase("payday") || args[0].equalsIgnoreCase("pd"))) {
+        } else if (l >= 1 && (args[0].equalsIgnoreCase("payday") || args[0].equalsIgnoreCase("pd"))) {
             // Attempts to pay out the predefined amounts of cash, fails before paying out anything if
             // the config is incorrect
             Bank ic = iConomy.getBank();
@@ -134,7 +136,7 @@ public class PayDay extends JavaPlugin {
                 return true;
             }
             List<String> pay = null;
-            if (args.length == 3) {
+            if (l == 3) {
                 pay = new LinkedList<String>();
                 List<String> full = conf.getKeys("players.");
                 if (args[1].equalsIgnoreCase("group") || args[1].equalsIgnoreCase("gr")) {
@@ -154,12 +156,12 @@ public class PayDay extends JavaPlugin {
                     sender.sendMessage(ChatColor.RED + "Invalid 3rd parameter, must be group or player");
                     return true;
                 }
-            } else if (args.length == 1) {
+            } else if (l == 1) {
                 pay = conf.getKeys("players.");
                 getServer().broadcastMessage(ChatColor.GOLD+"It is Pay Day!");
             }
 
-            if (args.length <= 3 || args.length == 1) {
+            if (l <= 3 || l == 1) {
                 for (String pl : pay) {
                     ic.getAccount(pl).add(conf.getInt("groups."+conf.getString("players."+pl, "none"),0));
                 }
@@ -168,9 +170,9 @@ public class PayDay extends JavaPlugin {
                 return true;
             }
             sender.sendMessage(ChatColor.GREEN+"Payday complete");
-        } else if (args.length >= 1 && (args[0].equalsIgnoreCase("set") || args[0].equalsIgnoreCase("s"))) {
+        } else if (l >= 1 && (args[0].equalsIgnoreCase("set") || args[0].equalsIgnoreCase("s"))) {
             // sets either a group's income or a player's group
-            if (args.length == 4) {
+            if (l == 4) {
                 if (args[1].equalsIgnoreCase("group") || args[1].equalsIgnoreCase("gr")) {
                     if (checkInt(args[3]) && !args[2].equalsIgnoreCase("none")) {
                         conf.setProperty("groups."+args[2], Integer.parseInt(args[3]));
@@ -195,10 +197,10 @@ public class PayDay extends JavaPlugin {
                 sender.sendMessage(ChatColor.RED+"Invalid format, see help");
             }
 
-        } else if (args.length >= 1 && (args[0].equalsIgnoreCase("move") || args[0].equalsIgnoreCase("mv"))) {
+        } else if (l >= 1 && (args[0].equalsIgnoreCase("move") || args[0].equalsIgnoreCase("mv"))) {
             // Moves all players from one group to another - even if the group you're moving from does
             // no longer exist
-            if (args.length == 3) {
+            if (l == 3) {
                 List<String> groups = conf.getKeys("groups.");
                 if (!groups.contains(args[2])) {
                     sender.sendMessage(ChatColor.RED + String.format("No such group %s", args[2]));
@@ -212,9 +214,9 @@ public class PayDay extends JavaPlugin {
                     }
                 }
             }
-        } else if (args.length >= 1 && (args[0].equalsIgnoreCase("delete") || args[0].equalsIgnoreCase("d"))) {
+        } else if (l >= 1 && (args[0].equalsIgnoreCase("delete") || args[0].equalsIgnoreCase("d"))) {
             // deletes either a player or a group
-            if (args.length == 3) {
+            if (l == 3) {
                 if (args[1].equalsIgnoreCase("group") || args[1].equalsIgnoreCase("gr")) {
                     if (conf.getString("groups."+args[2]) != null) {
                         conf.removeProperty("groups."+args[2]);
@@ -239,145 +241,142 @@ public class PayDay extends JavaPlugin {
             } else {
                 sender.sendMessage(ChatColor.RED+"Incorrect format, see help");
             }
-        } else if (args[0].equalsIgnoreCase("searchdelete") || args[0].equalsIgnoreCase("sd")) {
+        } else if (l  >= 1 && (args[0].equalsIgnoreCase("searchdelete") || args[0].equalsIgnoreCase("sd"))) {
             int i = 0;
-            if (args.length == 3) {
+            if (l == 3) {
                 if (args[1].equalsIgnoreCase("group") || args[1].equalsIgnoreCase("gr")) {
-                    for (String keys : conf.getKeys("groups.")) {
-                        if (keys.contains(args[2].toLowerCase())) {
-                            conf.removeProperty("groups."+args[2]);
+                    for (String key : conf.getKeys("groups.")) {
+                        if (key.contains(args[2].toLowerCase())) {
+                            i += 1;
+                            conf.removeProperty("groups."+key);
+                        }
+                    }
+                    conf.save();
+                } else if (args[1].equalsIgnoreCase("player") || args[1].equalsIgnoreCase("pl")) {
+                    for (String key : conf.getKeys("players")) {
+                        if (key.contains(uargs[2].toLowerCase())) {
+                            i += 1;
+                            conf.removeProperty("players."+key);
                         }
                     }
                     conf.save();
                 } else {
-                    sender.sendMessage(ChatColor.RED+"No such group: " + args[2]);
+                    sender.sendMessage(ChatColor.RED+ String.format("Unknown type %s!", args[1]));
                     return true;
                 }
-            } else if (args[1].equalsIgnoreCase("player") || args[1].equalsIgnoreCase("pl")) {
-                if (conf.getString("players."+uargs[2]) != null) {
-                    conf.removeProperty("players."+uargs[2]);
-                    conf.save();
-                } else {
-                    sender.sendMessage(ChatColor.RED+"No such player: " + uargs[2]);
-                    return true;
-                }
+                sender.sendMessage(ChatColor.GREEN + String.format("Done, %d entries removed", i));
             } else {
-                sender.sendMessage(ChatColor.RED+ String.format("Unknown type %s!", args[1]));
-                return true;
+                sender.sendMessage(ChatColor.RED+"Incorrect format, see help");
             }
-            sender.sendMessage(ChatColor.GREEN + "Done");
         } else {
-            sender.sendMessage(ChatColor.RED+"Incorrect format, see help");
+            sender.sendMessage(ChatColor.YELLOW + "No such command, see help!");
         }
-    } else {
-        sender.sendMessage(ChatColor.YELLOW + "No such command, see help!");
-    }
-    return true;
-}
-
-/**
- * Checks the configuration for errors - true if errors are found.
- * 
- * @param sender The one who will receive the error-messages
- * @param ic iConomy-bank
- * @return
- */
-public boolean checkErrors(CommandSender sender, Bank ic) {
-    sender.sendMessage(ChatColor.YELLOW+"Checking for errors.");
-    boolean failed = false;
-    if (conf.getString("failed.") != null) {
-        conf.removeProperty("failed.");
-    }
-    List<String> keys = conf.getKeys("players.");
-    List<String> dupefound = new LinkedList<String>();
-    List<String> groups = conf.getKeys("groups.");
-    if (keys == null || groups == null) {
-        sender.sendMessage(ChatColor.RED + "No configuration (groups or players)!");
         return true;
     }
-    for (String pl : keys) {
-        if (pl.contains("town-")) {
-            sender.sendMessage(ChatColor.YELLOW + pl + " may be a town.");
+
+    /**
+     * Checks the configuration for errors - true if errors are found.
+     * 
+     * @param sender The one who will receive the error-messages
+     * @param ic iConomy-bank
+     * @return
+     */
+    public boolean checkErrors(CommandSender sender, Bank ic) {
+        sender.sendMessage(ChatColor.YELLOW+"Checking for errors.");
+        boolean failed = false;
+        if (conf.getString("failed.") != null) {
+            conf.removeProperty("failed.");
         }
-        if (!ic.hasAccount(pl)) {
-            sender.sendMessage(ChatColor.RED+String.format("%s doesn't have an account!", pl));
-            failed = true;
+        List<String> keys = conf.getKeys("players.");
+        List<String> dupefound = new LinkedList<String>();
+        List<String> groups = conf.getKeys("groups.");
+        if (keys == null || groups == null) {
+            sender.sendMessage(ChatColor.RED + "No configuration (groups or players)!");
+            return true;
         }
-        for (String pl2 : keys) {
-            if (!dupefound.contains(pl2) && pl.equalsIgnoreCase(pl2) && !pl.equals(pl2)) {
-                sender.sendMessage(ChatColor.RED+String.format(ChatColor.RED + "%s may be a duplicate of %s (or vice versa)", pl, pl2));
-                dupefound.add(pl2);
-                dupefound.add(pl);
+        for (String pl : keys) {
+            if (pl.contains("town-") || pl.contains("nation-")) {
+                sender.sendMessage(ChatColor.YELLOW + pl + " may be a town or a nation.");
+            }
+            if (!ic.hasAccount(pl)) {
+                sender.sendMessage(ChatColor.RED+String.format("%s doesn't have an account!", pl));
+                failed = true;
+            }
+            for (String pl2 : keys) {
+                if (!dupefound.contains(pl2) && pl.equalsIgnoreCase(pl2) && !pl.equals(pl2)) {
+                    sender.sendMessage(ChatColor.RED+String.format(ChatColor.RED + "%s may be a duplicate of %s (or vice versa)", pl, pl2));
+                    dupefound.add(pl2);
+                    dupefound.add(pl);
+                    failed = true;
+                }
+            }
+            if (!groups.contains(conf.getString("players."+pl))) {
+                sender.sendMessage(ChatColor.RED+String.format("%s belongs to an invalid group - %s", pl, conf.getString("players."+pl)));
                 failed = true;
             }
         }
-        if (!groups.contains(conf.getString("players."+pl))) {
-            sender.sendMessage(ChatColor.RED+String.format("%s belongs to an invalid group - %s", pl, conf.getString("players."+pl)));
-            failed = true;
-        }
-    }
-    return failed;
+        return failed;
 
-}
-/**
- * Displays information about either groups or players.
- * @param page Page to view
- * @param sender Who gets the output
- * @param node either group or player - decides what is shown.
- */
-public void page(int page, CommandSender sender, String node) {
-    List<String> items = conf.getKeys(node.toLowerCase()+"s.");
+    }
+    /**
+     * Displays information about either groups or players.
+     * @param page Page to view
+     * @param sender Who gets the output
+     * @param node either group or player - decides what is shown.
+     */
+    public void page(int page, CommandSender sender, String node) {
+        List<String> items = conf.getKeys(node.toLowerCase()+"s.");
 
-    if (items != null && page*10 < items.size()) {
-        sender.sendMessage(String.format("Listing %ss, page %d of %d", node, page, (items.size()-1)/10+1));
-        for (int i = page*10; i < Math.min(items.size(), page*10+10); i++) {
-            sender.sendMessage(items.get(i) + " - " + conf.getString(node.toLowerCase()+"s."+items.get(i), "error"));
-        }
-        if (items.size() > page*10+10) {
-            sender.sendMessage(String.format("/pd %ss %d for next page", node, page+1));
-        }
-    } else {
-        sender.sendMessage("No more items.");
-    }
-}
-/**
- * Converts to int if valid, if not: returns 0
- * @param in
- * @param sender
- * @return
- */
-public int toInt(String in, CommandSender sender) {
-    int out = 0;
-    if (checkInt(in)) {
-        out = Integer.parseInt(in);
-    }
-    return out;
-}
-/**
- * Checks if a string is valid as a representation of an unsigned int.
- */
-public boolean checkInt(String in) {
-    char chars[] = in.toCharArray();
-    for (int i = 0; i < chars.length; i++) {
-        if (!Character.isDigit(chars[i])) {
-            return false;
-        }
-    }
-    return true;
-}
-/**
- * Basic Permissions-setup, see more here: https://github.com/TheYeti/Permissions/wiki/API-Reference
- */
-private void setupPermissions() {
-    Plugin test = this.getServer().getPluginManager().getPlugin("Permissions");
-
-    if (this.permissions == null) {
-        if (test != null) {
-            this.permissions = ((Permissions) test).getHandler();
+        if (items != null && page*10 < items.size()) {
+            sender.sendMessage(String.format("Listing %ss, page %d of %d", node, page, (items.size()-1)/10+1));
+            for (int i = page*10; i < Math.min(items.size(), page*10+10); i++) {
+                sender.sendMessage(items.get(i) + " - " + conf.getString(node.toLowerCase()+"s."+items.get(i), "error"));
+            }
+            if (items.size() > page*10+10) {
+                sender.sendMessage(String.format("/pd %ss %d for next page", node, page+1));
+            }
         } else {
-            System.out.println(ChatColor.YELLOW
-                    + "Permissons not detected - defaulting to OP!");
+            sender.sendMessage("No more items.");
         }
     }
-}
+    /**
+     * Converts to int if valid, if not: returns 0
+     * @param in
+     * @param sender
+     * @return
+     */
+    public int toInt(String in, CommandSender sender) {
+        int out = 0;
+        if (checkInt(in)) {
+            out = Integer.parseInt(in);
+        }
+        return out;
+    }
+    /**
+     * Checks if a string is valid as a representation of an unsigned int.
+     */
+    public boolean checkInt(String in) {
+        char chars[] = in.toCharArray();
+        for (int i = 0; i < chars.length; i++) {
+            if (!Character.isDigit(chars[i])) {
+                return false;
+            }
+        }
+        return true;
+    }
+    /**
+     * Basic Permissions-setup, see more here: https://github.com/TheYeti/Permissions/wiki/API-Reference
+     */
+    private void setupPermissions() {
+        Plugin test = this.getServer().getPluginManager().getPlugin("Permissions");
+
+        if (this.permissions == null) {
+            if (test != null) {
+                this.permissions = ((Permissions) test).getHandler();
+            } else {
+                System.out.println(ChatColor.YELLOW
+                        + "Permissons not detected - defaulting to OP!");
+            }
+        }
+    }
 }
