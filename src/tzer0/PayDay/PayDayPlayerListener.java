@@ -15,7 +15,7 @@ public class PayDayPlayerListener extends PlayerListener{
         Player pl = event.getPlayer();
         String[] command = event.getMessage().split(" ");
         if (command[0].equalsIgnoreCase("/mp")) {
-            if (plugin.permissions == null || !plugin.permissions.has(pl, "payday.admin")) {
+            if ((plugin.permissions == null && !pl.isOp()) || (plugin.permissions != null && !plugin.permissions.has(pl, "payday.admin"))) {
                 pl.sendMessage(ChatColor.RED+"You do not have access to this command!");
                 return;
             }            String []args = new String[command.length-1];
