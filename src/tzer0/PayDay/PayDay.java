@@ -358,7 +358,7 @@ public class PayDay extends JavaPlugin {
     public boolean checkInt(String in) {
         char chars[] = in.toCharArray();
         for (int i = 0; i < chars.length; i++) {
-            if (!Character.isDigit(chars[i])) {
+            if (!(Character.isDigit(chars[i]) || (i == 0 && chars[i] == '-'))) {
                 return false;
             }
         }
