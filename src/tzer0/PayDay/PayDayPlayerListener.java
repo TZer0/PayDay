@@ -11,6 +11,7 @@ public class PayDayPlayerListener extends PlayerListener{
     public PayDayPlayerListener(PayDay plugin) {
         this.plugin = plugin;
     }
+    
     public void onPlayerCommandPreprocess(PlayerCommandPreprocessEvent event) {
         Player pl = event.getPlayer();
         String[] command = event.getMessage().split(" ");
