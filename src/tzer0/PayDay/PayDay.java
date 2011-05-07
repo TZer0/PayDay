@@ -16,8 +16,7 @@ import org.bukkit.plugin.PluginManager;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.util.config.Configuration;
 
-import com.nijiko.coelho.iConomy.iConomy;
-import com.nijiko.coelho.iConomy.system.Bank;
+import com.iConomy.iConomy;
 import com.nijiko.permissions.PermissionHandler;
 import com.nijikokun.bukkit.Permissions.Permissions;
 
@@ -28,10 +27,10 @@ public class PayDay extends JavaPlugin {
     Payer payer;
     Calendar cal;
     boolean lastFailed;
-    boolean runRecur;
     int relative;
     long mode;
     Calendar prev;
+    public iConomy iConomy = null;
     @Override
     public void onDisable() {
         getServer().getScheduler().cancelTasks(this);
@@ -111,21 +110,20 @@ public class PayDay extends JavaPlugin {
                 sender.sendMessage(ChatColor.YELLOW+"h = hour, d = day, w = week, m = month");
                 sender.sendMessage(ChatColor.YELLOW+"s will always happen on the first minute of the hour, month,");
                 sender.sendMessage(ChatColor.YELLOW+"day or week.");
-                sender.sendMessage(ChatColor.YELLOW+"Remember: you must use alaises when declaring recurring paydays");
-                sender.sendMessage(ChatColor.YELLOW+"/pd rec static day will NOT work, you must use /pd rec s d");
             } else {
                 sender.sendMessage(ChatColor.YELLOW + "No such help-page!");
             }
             return true;
 
-        } else if (l >= 1 && (args[0].equalsIgnoreCase("sync") || (args[0].equalsIgnoreCase("sy")))) { 
+        } else if (l >= 1 && (args[0].equalsIgnoreCase("sync") || (args[0].equalsIgnoreCase("sy")))) {
+            sender.sendMessage(ChatColor.RED+"Sorry, syncronization is currently unavailable.");
+            /*
             // Imports data from Permissions and iConomy.
-            Bank ic = iConomy.getBank();
             if (permissions == null) {
                 sender.sendMessage(ChatColor.RED + "Permissions unavailable - aborting.");
             } else {
                 boolean overwrite = (l == 2 && (args[1].equalsIgnoreCase("overwrite") || args[1].equalsIgnoreCase("ow")));
-                for (String key: ic.getAccounts().keySet()) {
+                for (String key: iConomy.getBank("a").getAccounts()) {
                     if (key.contains("town-") || key.contains("nation-")) {
                         continue;
                     }
@@ -140,9 +138,10 @@ public class PayDay extends JavaPlugin {
                 sender.sendMessage(ChatColor.GREEN+"Done!");
             }
             return true;
+            */
         } else if (l >= 1 && (args[0].equalsIgnoreCase("checkerrors") || args[0].equalsIgnoreCase("ce"))) {
             // Utility - checks for errors while not running payday.
-            if (!checkErrors(sender, iConomy.getBank())) {
+            if (!checkErrors(sender)) {
                 sender.sendMessage(ChatColor.GREEN+"No errors found.");
             } else {
                 sender.sendMessage(ChatColor.RED + "Errors found, fix them before running payday");
@@ -277,8 +276,7 @@ public class PayDay extends JavaPlugin {
         boolean sendMsg = sender != null;
         int l = args.length;
         if (l >= 2) {
-            if (args[1].equalsIgnoreCase("d")) {
-                runRecur = false;
+            if (args[1].equalsIgnoreCase("d") || args[1].equalsIgnoreCase("deactivated")) {
                 if (sendMsg) {
                     sender.sendMessage(ChatColor.GREEN+"Recurring paydays deactivated");
                 }
@@ -287,7 +285,7 @@ public class PayDay extends JavaPlugin {
                 conf.setProperty("mode", "");
                 conf.save();
                 mode = 0;
-            } else if (args[1].equalsIgnoreCase("r")) {
+            } else if (args[1].equalsIgnoreCase("r") || args[1].equalsIgnoreCase("relative")) {
                 if (l == 3) {
                     mode = 0;
                     String []split = args[2].split(":");
@@ -295,7 +293,6 @@ public class PayDay extends JavaPlugin {
                     for (int i = 0; i < Math.min(split.length, 3); i++) {
                         v = toInt(split[i], sender);
                         if (v < 0) {
-                            runRecur = false;
                             if (sendMsg) {
                                 sender.sendMessage(ChatColor.RED+"Invalid format, deactivating paydays.");
                             }
@@ -320,23 +317,29 @@ public class PayDay extends JavaPlugin {
                     conf.setProperty("mode", args[2]);
                     conf.setProperty("modetype", "r");
                     conf.save();
+                } else {
+                    if (sendMsg) {
+                        sender.sendMessage(ChatColor.RED+"Invalid format, deactivating paydays.");
+                    }
+                    conf.setProperty("modetype", "d");
+                    conf.setProperty("mode", "");
+                    conf.save();
                 }
-            } else if (args[1].equalsIgnoreCase("s")) {
+            } else if (args[1].equalsIgnoreCase("s") || args[1].equalsIgnoreCase("static")) {
                 if (l == 3) {
-                    if (args[2].equalsIgnoreCase("h")) {
+                    if (args[2].equalsIgnoreCase("h") || args[2].equalsIgnoreCase("hour")) {
                         conf.setProperty("mode", "h");
                         mode = -1;
-                    } else if (args[2].equalsIgnoreCase("d")) {
+                    } else if (args[2].equalsIgnoreCase("d") || args[2].equalsIgnoreCase("day")) {
                         conf.setProperty("mode", "d");
                         mode = -2;
-                    } else if (args[2].equalsIgnoreCase("w")) {
+                    } else if (args[2].equalsIgnoreCase("w") || args[2].equalsIgnoreCase("week")) {
                         conf.setProperty("mode", "w");
                         mode = -3;
-                    } else if (args[2].equalsIgnoreCase("m")) {
+                    } else if (args[2].equalsIgnoreCase("m") || args[2].equalsIgnoreCase("month")) {
                         conf.setProperty("mode", "m");
                         mode = -4;
                     } else {
-                        runRecur = false;
                         if (sendMsg) {
                             sender.sendMessage(ChatColor.RED+"Invalid format, deactivating paydays.");
                         }
@@ -351,10 +354,21 @@ public class PayDay extends JavaPlugin {
                     prev = Calendar.getInstance();
                     conf.setProperty("modetype", "s");
                     conf.save();
+                } else {
+                    if (sendMsg) {
+                        sender.sendMessage(ChatColor.RED+"Invalid format, deactivating paydays.");
+                    }
+                    conf.setProperty("modetype", "d");
+                    conf.setProperty("mode", "");
+                    conf.save();
                 }
+            } 
+        } else {
+            if (sendMsg) {
+                sender.sendMessage(ChatColor.GREEN+String.format("Current setting: %s - %s", 
+                        conf.getString("modetype", "d"), conf.getString("mode", "")));
             }
         }
-
     }
 
 
@@ -365,8 +379,7 @@ public class PayDay extends JavaPlugin {
         for (int i = 0; i < l; i++) {
             uargs[i] = args[i].toLowerCase();
         }
-        Bank ic = iConomy.getBank();
-        if (checkErrors(sender, iConomy.getBank())) {
+        if (checkErrors(sender)) {
             if (sendMsg) {
                 sender.sendMessage(ChatColor.RED + "Errors found, fix them before running payday");
             } else {
@@ -407,7 +420,7 @@ public class PayDay extends JavaPlugin {
 
         if (l <= 3 || l == 1) {
             for (String pl : pay) {
-                ic.getAccount(pl).add(conf.getInt("groups."+conf.getString("players."+pl, "none"),0));
+                iConomy.getAccount(pl).getHoldings().add(conf.getInt("groups."+conf.getString("players."+pl, "none"),0));
             }
         } else {
             if (sendMsg) {
@@ -427,7 +440,7 @@ public class PayDay extends JavaPlugin {
      * @param ic iConomy-bank
      * @return
      */
-    public boolean checkErrors(CommandSender sender, Bank ic) {
+    public boolean checkErrors(CommandSender sender) {
         boolean sendMsg = sender != null;
         lastFailed = false;
         conf.setProperty("lastFailed", false);
@@ -454,7 +467,7 @@ public class PayDay extends JavaPlugin {
                     sender.sendMessage(ChatColor.YELLOW + pl + " may be a town or a nation.");
                 }
             }
-            if (!ic.hasAccount(pl)) {
+            if (!iConomy.hasAccount(pl)) {
                 if (sendMsg) {
                     sender.sendMessage(ChatColor.RED+String.format("%s doesn't have an account!", pl));
                 }
