@@ -116,14 +116,12 @@ public class PayDay extends JavaPlugin {
             return true;
 
         } else if (l >= 1 && (args[0].equalsIgnoreCase("sync") || (args[0].equalsIgnoreCase("sy")))) {
-            sender.sendMessage(ChatColor.RED+"Sorry, syncronization is currently unavailable.");
-            /*
-            // Imports data from Permissions and iConomy.
             if (permissions == null) {
                 sender.sendMessage(ChatColor.RED + "Permissions unavailable - aborting.");
             } else {
                 boolean overwrite = (l == 2 && (args[1].equalsIgnoreCase("overwrite") || args[1].equalsIgnoreCase("ow")));
-                for (String key: iConomy.getBank("a").getAccounts()) {
+                sender.sendMessage(iConomy.Accounts.values().size()+"");
+                for (String key: iConomy.Accounts.ranking(iConomy.Accounts.values().size()).keySet()) {
                     if (key.contains("town-") || key.contains("nation-")) {
                         continue;
                     }
@@ -138,7 +136,6 @@ public class PayDay extends JavaPlugin {
                 sender.sendMessage(ChatColor.GREEN+"Done!");
             }
             return true;
-            */
         } else if (l >= 1 && (args[0].equalsIgnoreCase("checkerrors") || args[0].equalsIgnoreCase("ce"))) {
             // Utility - checks for errors while not running payday.
             if (!checkErrors(sender)) {
