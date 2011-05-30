@@ -8,11 +8,8 @@ import org.bukkit.ChatColor;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
-import org.bukkit.event.Event;
-import org.bukkit.event.Event.Priority;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.PluginDescriptionFile;
-import org.bukkit.plugin.PluginManager;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.util.config.Configuration;
 
@@ -48,9 +45,6 @@ public class PayDay extends JavaPlugin {
         args[2] = conf.getString("mode", "");
         setRecur(null, args);
         setupPermissions();
-        PayDayPlayerListener tmp = new PayDayPlayerListener(this);
-        PluginManager man = getServer().getPluginManager();
-        man.registerEvent(Event.Type.PLAYER_COMMAND_PREPROCESS, tmp, Priority.Normal, this);
         payer = new Payer();
         getServer().getScheduler().scheduleAsyncRepeatingTask(this, payer, 0L, 450L);
         System.out.println(pdfFile.getName() + " version "
@@ -60,6 +54,13 @@ public class PayDay extends JavaPlugin {
     public boolean onCommand(CommandSender sender, Command cmd,
             String commandLabel, String[] uargs) {
         // Keeping everything lower-case except for account names.
+        if (sender instanceof Player) {
+            Player pl = (Player)sender;
+            if ((permissions == null && !pl.isOp()) || (permissions != null && !permissions.has(pl, "payday.admin"))) {
+                sender.sendMessage(ChatColor.RED+"You do not have access to this command!");
+                return true;
+            }
+        }
         String[] args = new String[uargs.length];
         for (int i = 0; i < args.length; i++) {
             uargs[i] = uargs[i].replace(".", "");
@@ -85,6 +86,7 @@ public class PayDay extends JavaPlugin {
                 sender.sendMessage(ChatColor.YELLOW+"delete player/group name - deletes a group/player");
                 sender.sendMessage(ChatColor.YELLOW+"searchdelete player/group name - wildcard delete");
                 sender.sendMessage(ChatColor.YELLOW+"sync [overwrite] - imports players and groups from iConomy and Permissions");
+                sender.sendMessage(ChatColor.YELLOW+"onlinemode [f/t] - only online players get paid");
                 sender.sendMessage(ChatColor.RED+"REMEMBER: player-names are CASE-SENSITIVE");
                 sender.sendMessage(ChatColor.YELLOW+"help 2 for aliases (very useful), help 3 for schedules");
             } else if (page == 2) {
@@ -93,7 +95,7 @@ public class PayDay extends JavaPlugin {
                 sender.sendMessage(ChatColor.YELLOW+"group = gr, checkerrors = ce, payday = pd");
                 sender.sendMessage(ChatColor.YELLOW+"set = s, delete = d, move = mv");
                 sender.sendMessage(ChatColor.YELLOW+"sync = sy, overwrite = ow, searchdelete = sd");
-                sender.sendMessage(ChatColor.YELLOW+"recurring = rec");
+                sender.sendMessage(ChatColor.YELLOW+"recurring = rec, onlinemode = om");
                 sender.sendMessage(ChatColor.YELLOW+"Example usage:");
                 sender.sendMessage(ChatColor.YELLOW+"/pd s gr epicgroup 10000");
                 sender.sendMessage(ChatColor.YELLOW+"/pd s pl TZer0 epicgroup");
@@ -157,6 +159,21 @@ public class PayDay extends JavaPlugin {
                 page = toInt(args[2], sender);
             }
             page(page, sender, "Group");
+        } else if (l >= 1 && (args[0].equalsIgnoreCase("onlinemode") || args[0].equalsIgnoreCase("om"))) {
+            // Attempts to pay out the predefined amounts of cash, fails before paying out anything if
+            // the config is incorrect
+            if (l == 2) {
+                conf.setProperty("onlinemode", args[1].equalsIgnoreCase("t") || args[1].equalsIgnoreCase("true"));
+                conf.save();
+            } 
+            String state = "";
+            if (conf.getBoolean("onlinemode", false)) {
+                state = "on.";
+            } else {
+                state = "off.";
+            }
+            sender.sendMessage(ChatColor.GREEN + "Online-mode is " + state);
+            return true;
         } else if (l >= 1 && (args[0].equalsIgnoreCase("payday") || args[0].equalsIgnoreCase("pd"))) {
             // Attempts to pay out the predefined amounts of cash, fails before paying out anything if
             // the config is incorrect
@@ -416,6 +433,22 @@ public class PayDay extends JavaPlugin {
         }
 
         if (l <= 3 || l == 1) {
+            if (conf.getBoolean("onlinemode", false)) {
+                LinkedList<String> filtered = new LinkedList<String>();
+                for (Player online : getServer().getOnlinePlayers()) {
+                    boolean found = false;
+                    for (String pl : pay) {
+                        if (online.getName().equalsIgnoreCase(pl)) {
+                            found = true;
+                            break;
+                        }
+                    }
+                    if (found) {
+                        filtered.add(online.getName());
+                    }
+                }
+                pay = filtered;
+            }
             for (String pl : pay) {
                 iConomy.getAccount(pl).getHoldings().add(conf.getInt("groups."+conf.getString("players."+pl, "none"),0));
             }
