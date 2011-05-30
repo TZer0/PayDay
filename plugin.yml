@@ -1,6 +1,6 @@
 name: PayDay
 main: tzer0.PayDay.PayDay
-version: 0.2.2
+version: 0.2.3
 author: TZer0
 commands:
     pd:
