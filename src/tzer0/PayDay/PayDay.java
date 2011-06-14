@@ -604,7 +604,6 @@ public class PayDay extends JavaPlugin {
             int pay = 0;
             Calendar tmp = Calendar.getInstance();
             if (mode == -1) {
-                getServer().broadcastMessage("correct mode!");
                 if (prev.get(Calendar.HOUR) != tmp.get(Calendar.HOUR)) {
                     pay++;
                 }
