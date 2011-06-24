@@ -122,15 +122,14 @@ public class PayDay extends JavaPlugin {
                 sender.sendMessage(ChatColor.RED + "Permissions unavailable - aborting.");
             } else {
                 boolean overwrite = (l == 2 && (args[1].equalsIgnoreCase("overwrite") || args[1].equalsIgnoreCase("ow")));
-                sender.sendMessage(iConomy.Accounts.values().size()+"");
                 for (String key: iConomy.Accounts.ranking(iConomy.Accounts.values().size()).keySet()) {
                     if (key.contains("town-") || key.contains("nation-")) {
                         continue;
                     }
                     if (conf.getString("players."+key) == null || overwrite) {
-                        conf.setProperty("players."+key, permissions.getGroup("world", key).toLowerCase());
-                        if (conf.getString("groups."+permissions.getGroup("world", key).toLowerCase()) == null) {
-                            conf.setProperty("groups."+permissions.getGroup("world", key).toLowerCase(), 0);
+                        conf.setProperty("players."+key, permissions.getPrimaryGroup("world", key).toLowerCase());
+                        if (conf.getString("groups."+permissions.getPrimaryGroup("world", key).toLowerCase()) == null) {
+                            conf.setProperty("groups."+permissions.getPrimaryGroup("world", key).toLowerCase(), 0);
                         }
                     }
                 }
