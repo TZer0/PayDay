@@ -334,13 +334,13 @@ public class PayDay extends JavaPlugin {
                     mode - (tmp.getTimeInMillis()-prev.getTimeInMillis())/1000 ));
         } else {
             String unit = "";
-            if (mode == 1) {
+            if (mode == -1) {
                 unit = "hour.";
-            } else if (mode == 2) {
+            } else if (mode == -2) {
                 unit = "day.";
-            } else if (mode == 3) {
+            } else if (mode == -3) {
                 unit = "week.";
-            } else if (mode == 4) {
+            } else if (mode == -4) {
                 unit = "month.";
             }
             sender.sendMessage(ChatColor.GREEN + String.format("%s on the beginning of the next %s", prePart, unit));
