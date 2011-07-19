@@ -1,8 +1,11 @@
 name: PayDay
 main: tzer0.PayDay.PayDay
-version: 0.2.7
+version: 0.2.8
 author: TZer0
 commands:
     pd:
         description: Administrates payment-settings
         usage: /pd
+    payday:
+        description: Administrates payment-settings
+        usage: /payday

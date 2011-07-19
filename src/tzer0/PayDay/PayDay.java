@@ -66,6 +66,33 @@ public class PayDay extends JavaPlugin {
                 return true;
             }
         }
+        if (uargs.length != 0) {
+            String fullCommand = uargs[0];
+            for (int i = 1; i < uargs.length; i++) {
+                fullCommand += " " + uargs[i];
+            }
+            String specialSplit[] = fullCommand.split("\\\"");
+            if (specialSplit.length != 1) {
+                LinkedList<String> out = new LinkedList<String>();
+                for (int i = 0; i < specialSplit.length; i++) {
+                    if (specialSplit[i].equalsIgnoreCase("") || specialSplit[i].equalsIgnoreCase(" ")) {
+                        continue;
+                    }
+                    if (i%2 == 1) {
+                        out.add(specialSplit[i]);
+                    } else {
+                        for (String split : specialSplit[i].split(" ")) {
+                            if (split.equalsIgnoreCase("")) {
+                                continue;
+                            }
+                            out.add(split);
+                        }
+                    }
+                }
+                uargs = new String[1];
+                uargs = out.toArray(uargs);
+            }
+        }
         String[] args = new String[uargs.length];
         for (int i = 0; i < args.length; i++) {
             uargs[i] = uargs[i].replace(".", "");
@@ -85,9 +112,9 @@ public class PayDay extends JavaPlugin {
                 sender.sendMessage(ChatColor.YELLOW+"groups [#] " + ChatColor.GREEN + "- shows number # page in the list of groups");
                 sender.sendMessage(ChatColor.YELLOW+"payday " + ChatColor.GREEN + "- pays everyone their money, won't run if (ce) fails");
                 sender.sendMessage(ChatColor.YELLOW+"payday [#] " + ChatColor.GREEN + "- same as above, but pays # times.");
-                sender.sendMessage(ChatColor.YELLOW+"set group name value " + ChatColor.GREEN + "- creates a group with earns value per payday");
+                sender.sendMessage(ChatColor.YELLOW+"set group name value " + ChatColor.GREEN + "- creates a group");
                 sender.sendMessage(ChatColor.YELLOW+"set player name groupname " + ChatColor.GREEN + "- assigns a player to a group");
-                sender.sendMessage(ChatColor.YELLOW+"move groupname1 groupname2 " + ChatColor.GREEN + "- moves all players from one group to another");
+                sender.sendMessage(ChatColor.YELLOW+"move groupname1 groupname2 " + ChatColor.GREEN + "- moves all players");
                 sender.sendMessage(ChatColor.YELLOW+"delete player/group name " + ChatColor.GREEN + "- deletes a group/player");
                 sender.sendMessage(ChatColor.YELLOW+"searchdelete player/group name " + ChatColor.GREEN + "- wildcard delete");
                 sender.sendMessage(ChatColor.YELLOW+"sync [overwrite] " + ChatColor.GREEN + "- imports players and groups");
@@ -131,14 +158,29 @@ public class PayDay extends JavaPlugin {
                 sender.sendMessage(ChatColor.RED + "Permissions unavailable - aborting.");
             } else {
                 boolean overwrite = (l == 2 && (args[1].equalsIgnoreCase("overwrite") || args[1].equalsIgnoreCase("ow")));
+                if (overwrite) {
+                    conf.removeProperty("players.");
+                }
                 for (String key: iConomy.Accounts.ranking(iConomy.Accounts.values().size()).keySet()) {
                     if (key.contains("town-") || key.contains("nation-")) {
                         continue;
                     }
                     if (conf.getString("players."+key) == null || overwrite) {
-                        conf.setProperty("players."+key, permissions.getPrimaryGroup("world", key).toLowerCase());
-                        if (conf.getString("groups."+permissions.getPrimaryGroup("world", key).toLowerCase()) == null) {
-                            conf.setProperty("groups."+permissions.getPrimaryGroup("world", key).toLowerCase(), 0);
+                        boolean found = false;
+                        if (!overwrite) {
+                            if (conf.getKeys("players.") != null) {
+                                for (String check : conf.getKeys("players.")) {
+                                    if (check.equalsIgnoreCase(key)) {
+                                        found = true;
+                                    }
+                                }
+                            }
+                        }
+                        if (!found) {
+                            conf.setProperty("players."+key, permissions.getPrimaryGroup("world", key).toLowerCase());
+                            if (conf.getString("groups."+permissions.getPrimaryGroup("world", key).toLowerCase()) == null) {
+                                conf.setProperty("groups."+permissions.getPrimaryGroup("world", key).toLowerCase(), 0);
+                            }
                         }
                     }
                 }
@@ -227,10 +269,18 @@ public class PayDay extends JavaPlugin {
                         sender.sendMessage("Invalid value.");
                     }
                 } else if (args[1].equalsIgnoreCase("player") || args[1].equalsIgnoreCase("pl")) {
+                    if (conf.getKeys("players.") != null) {
+                        for (String pl : conf.getKeys("players.")) {
+                            if (pl.equalsIgnoreCase(uargs[2])) {
+                                conf.removeProperty("players."+pl);
+                                conf.save();
+                            }
+                        }
+                    }
                     if (conf.getString("groups."+args[3]) != null) {
                         conf.setProperty("players."+uargs[2], args[3]);
                         conf.save();
-                        sender.sendMessage(ChatColor.GREEN + "Done.");
+                        sender.sendMessage(ChatColor.GREEN + "Done");
                     } else {
                         sender.sendMessage(ChatColor.RED + "No such group");
                     }
@@ -247,6 +297,10 @@ public class PayDay extends JavaPlugin {
             // no longer exist
             if (l == 3) {
                 List<String> groups = conf.getKeys("groups.");
+                if (groups == null) {
+                    sender.sendMessage(ChatColor.RED + "No groups found");
+                    return true;
+                }
                 if (!groups.contains(args[2])) {
                     sender.sendMessage(ChatColor.RED + String.format("No such group %s", args[2]));
                 } else {
@@ -264,7 +318,7 @@ public class PayDay extends JavaPlugin {
             if (l == 3) {
                 if (args[1].equalsIgnoreCase("group") || args[1].equalsIgnoreCase("gr")) {
                     if (conf.getString("groups."+args[2]) != null) {
-                        conf.removeProperty("groups."+args[2]);
+                        conf.removeProperty("groups."+uargs[2]);
                         conf.save();
                     } else {
                         sender.sendMessage(ChatColor.RED+"No such group: " + args[2]);
@@ -275,8 +329,20 @@ public class PayDay extends JavaPlugin {
                         conf.removeProperty("players."+uargs[2]);
                         conf.save();
                     } else {
-                        sender.sendMessage(ChatColor.RED+"No such player: " + uargs[2]);
-                        return true;
+                        boolean found = false;
+                        if (conf.getKeys("players.") != null) {
+                            for (String pl : conf.getKeys("players.")) {
+                                if (pl.equalsIgnoreCase(uargs[2])) {
+                                    conf.removeProperty("players."+pl);
+                                    conf.save();
+                                    found = true;
+                                }
+                            }
+                        }
+                        if (!found) {
+                            sender.sendMessage(ChatColor.RED+"No such player: " + uargs[2]);
+                            return true;
+                        }
                     }
                 } else {
                     sender.sendMessage(ChatColor.RED+ String.format("Unknown type %s!", args[1]));
@@ -298,7 +364,7 @@ public class PayDay extends JavaPlugin {
                     }
                     conf.save();
                 } else if (args[1].equalsIgnoreCase("player") || args[1].equalsIgnoreCase("pl")) {
-                    for (String key : conf.getKeys("players")) {
+                    for (String key : conf.getKeys("players.")) {
                         if (key.contains(uargs[2].toLowerCase())) {
                             i += 1;
                             conf.removeProperty("players."+key);
@@ -569,7 +635,6 @@ public class PayDay extends JavaPlugin {
             conf.removeProperty("failed.");
         }
         List<String> keys = conf.getKeys("players.");
-        List<String> dupefound = new LinkedList<String>();
         List<String> groups = conf.getKeys("groups.");
         if (keys == null || groups == null) {
             if (sendMsg) {
@@ -584,18 +649,26 @@ public class PayDay extends JavaPlugin {
                 }
             }
             if (!iConomy.hasAccount(pl)) {
+                boolean notFound = true;
+                String corr = "";
                 if (sendMsg) {
                     sender.sendMessage(ChatColor.RED+String.format("%s doesn't have an account!", pl));
                 }
-                failed = true;
-            }
-            for (String pl2 : keys) {
-                if (!dupefound.contains(pl2) && pl.equalsIgnoreCase(pl2) && !pl.equals(pl2)) {
-                    if (sendMsg) {
-                        sender.sendMessage(ChatColor.RED+String.format(ChatColor.RED + "%s may be a duplicate of %s (or vice versa)", pl, pl2));
+                for (String acc : iConomy.Accounts.ranking(iConomy.Accounts.values().size()).keySet()) {
+                    if (acc.equalsIgnoreCase(pl)) {
+                        conf.setProperty("players."+acc, conf.getProperty("players."+pl));
+                        conf.removeProperty("players."+pl);
+                        conf.save();
+                        corr = acc;
+                        notFound = false;
+                        if (sendMsg) {
+                            sender.sendMessage(ChatColor.GREEN + String.format("Corrected case for %s to %s.", pl, corr));
+                        }
+                        pl = acc;
+                        break;
                     }
-                    dupefound.add(pl2);
-                    dupefound.add(pl);
+                }
+                if (notFound) {
                     failed = true;
                 }
             }
