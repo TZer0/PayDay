@@ -1,6 +1,7 @@
 package tzer0.PayDay;
 
 import java.util.Calendar;
+import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -121,7 +122,8 @@ public class PayDay extends JavaPlugin {
                 sender.sendMessage(ChatColor.YELLOW+"onlinemode [f/t] " + ChatColor.GREEN + "- only online players get paid");
                 sender.sendMessage(ChatColor.YELLOW+"lastperiodmode [f/t] " + ChatColor.GREEN + "- only pay players online in last period");
                 sender.sendMessage(ChatColor.YELLOW+"time " + ChatColor.GREEN + "- shows how long it is to the next payday");
-                sender.sendMessage(ChatColor.RED+"REMEMBER: player-names are CASE-SENSITIVE");
+                sender.sendMessage(ChatColor.YELLOW+"interest [value] " + ChatColor.GREEN + "- sets or shows interest");
+                sender.sendMessage(ChatColor.YELLOW+"worldconf [worldname] " + ChatColor.GREEN + "- sets or shows selected world");
                 sender.sendMessage(ChatColor.YELLOW+"help 2 for aliases (very useful), help 3 for schedules");
             } else if (page == 2) {
                 sender.sendMessage(ChatColor.YELLOW+"Aliases:");
@@ -129,6 +131,7 @@ public class PayDay extends JavaPlugin {
                 sender.sendMessage(ChatColor.YELLOW+"group = gr, checkerrors = ce, payday = pd");
                 sender.sendMessage(ChatColor.YELLOW+"set = s, delete = d, move = mv, t = time");
                 sender.sendMessage(ChatColor.YELLOW+"sync = sy, overwrite = ow, searchdelete = sd");
+                sender.sendMessage(ChatColor.YELLOW+"interest = i, worldconf = wc");
                 sender.sendMessage(ChatColor.YELLOW+"recurring = rec, onlinemode = om, lastperiodmode = lpm");
                 sender.sendMessage(ChatColor.YELLOW+"Example usage:");
                 sender.sendMessage(ChatColor.YELLOW+"/pd s gr epicgroup 10000");
@@ -151,9 +154,9 @@ public class PayDay extends JavaPlugin {
             }
             return true;
 
-        } else if (l >= 1 && (args[0].equalsIgnoreCase("time") || (args[0].equalsIgnoreCase("t")))) {
+        } else if ((args[0].equalsIgnoreCase("time") || (args[0].equalsIgnoreCase("t")))) {
             timeToPayDay(sender);
-        } else if (l >= 1 && (args[0].equalsIgnoreCase("sync") || (args[0].equalsIgnoreCase("sy")))) {
+        } else if ((args[0].equalsIgnoreCase("sync") || (args[0].equalsIgnoreCase("sy")))) {
             if (permissions == null) {
                 sender.sendMessage(ChatColor.RED + "Permissions unavailable - aborting.");
             } else {
@@ -177,9 +180,10 @@ public class PayDay extends JavaPlugin {
                             }
                         }
                         if (!found) {
-                            conf.setProperty("players."+key, permissions.getPrimaryGroup("world", key).toLowerCase());
-                            if (conf.getString("groups."+permissions.getPrimaryGroup("world", key).toLowerCase()) == null) {
-                                conf.setProperty("groups."+permissions.getPrimaryGroup("world", key).toLowerCase(), 0);
+                            String worldname = conf.getString("worldconf", "world");
+                            conf.setProperty("players."+key, permissions.getPrimaryGroup(worldname, key).toLowerCase());
+                            if (conf.getString("groups."+permissions.getPrimaryGroup(worldname, key).toLowerCase()) == null) {
+                                conf.setProperty("groups."+permissions.getPrimaryGroup(worldname, key).toLowerCase(), 0);
                             }
                         }
                     }
@@ -188,28 +192,28 @@ public class PayDay extends JavaPlugin {
                 sender.sendMessage(ChatColor.GREEN+"Done!");
             }
             return true;
-        } else if (l >= 1 && (args[0].equalsIgnoreCase("checkerrors") || args[0].equalsIgnoreCase("ce"))) {
+        } else if ((args[0].equalsIgnoreCase("checkerrors") || args[0].equalsIgnoreCase("ce"))) {
             // Utility - checks for errors while not running payday.
             if (!checkErrors(sender)) {
                 sender.sendMessage(ChatColor.GREEN+"No errors found.");
             } else {
                 sender.sendMessage(ChatColor.RED + "Errors found, fix them before running payday");
             }
-        } else if (l >= 1 && (args[0].replace("players", "player").equalsIgnoreCase("player") || args[0].equalsIgnoreCase("pl"))) {
+        } else if ((args[0].replace("players", "player").equalsIgnoreCase("player") || args[0].equalsIgnoreCase("pl"))) {
             // Lists players
             int page = 0;
             if (l == 2) {
                 page = toInt(args[1], sender);
             }
             page(page, sender, "Player");
-        } else if (l >= 1 && (args[0].replace("groups", "group").equalsIgnoreCase("group") || args[0].equalsIgnoreCase("gr"))) {
+        } else if ((args[0].replace("groups", "group").equalsIgnoreCase("group") || args[0].equalsIgnoreCase("gr"))) {
             // Lists groups
             int page = 0;
             if (l == 2) {
                 page = toInt(args[2], sender);
             }
             page(page, sender, "Group");
-        } else if (l >= 1 && (args[0].equalsIgnoreCase("onlinemode") || args[0].equalsIgnoreCase("om"))) {
+        } else if ((args[0].equalsIgnoreCase("onlinemode") || args[0].equalsIgnoreCase("om"))) {
             // Attempts to pay out the predefined amounts of cash, fails before paying out anything if
             // the config is incorrect
             if (l == 2) {
@@ -224,7 +228,25 @@ public class PayDay extends JavaPlugin {
             }
             sender.sendMessage(ChatColor.GREEN + "Online-mode is " + state);
             return true;
-        } else if (l >= 1 && (args[0].equalsIgnoreCase("lastperiodmode") || args[0].equalsIgnoreCase("lpm"))) {
+        } else if ((args[0].equalsIgnoreCase("worldconf") || args[0].equalsIgnoreCase("wc"))) {
+            if (l >= 2) {
+                conf.setProperty("worldconf", args[1]);
+            }
+            sender.sendMessage(ChatColor.GREEN + String.format("Worldconf is set to %s.", conf.getString("worldconf", "world")));
+        } else if ((args[0].equalsIgnoreCase("interest") || args[0].equalsIgnoreCase("i"))) {
+            if (l >= 2) {
+                double newval = 0.0;
+                try {
+                    newval = Double.parseDouble(args[1]);
+                } catch (NumberFormatException e) {
+                    sender.sendMessage(ChatColor.RED + "Invalid format!");
+                }
+                conf.setProperty("interest", newval);
+                conf.save();
+            }
+            sender.sendMessage(ChatColor.GREEN + String.format("Interest is set to %.5f.", conf.getDouble("interest",0.0)));
+        }else if ((args[0].equalsIgnoreCase("lastperiodmode") || args[0].equalsIgnoreCase("lpm"))) {
+            
             // Attempts to pay out the predefined amounts of cash, fails before paying out anything if
             // the config is incorrect
             if (l == 2) {
@@ -239,7 +261,7 @@ public class PayDay extends JavaPlugin {
             }
             sender.sendMessage(ChatColor.GREEN + "LPM-mode is " + state);
             return true;
-        } else if (l >= 1 && (args[0].equalsIgnoreCase("payday") || args[0].equalsIgnoreCase("pd"))) {
+        } else if ((args[0].equalsIgnoreCase("payday") || args[0].equalsIgnoreCase("pd"))) {
             // Attempts to pay out the predefined amounts of cash, fails before paying out anything if
             // the config is incorrect
             int times = 1;
@@ -255,9 +277,9 @@ public class PayDay extends JavaPlugin {
             }
             payDay(sender, args, times);
             return true;
-        } else if (l >= 1 && (args[0].equalsIgnoreCase("recurring") || args[0].equalsIgnoreCase("rec"))) {
+        } else if ((args[0].equalsIgnoreCase("recurring") || args[0].equalsIgnoreCase("rec"))) {
             setRecur(sender, args);
-        } else if (l >= 1 && (args[0].equalsIgnoreCase("set") || args[0].equalsIgnoreCase("s"))) {
+        } else if ((args[0].equalsIgnoreCase("set") || args[0].equalsIgnoreCase("s"))) {
             // sets either a group's income or a player's group
             if (l == 4) {
                 if (args[1].equalsIgnoreCase("group") || args[1].equalsIgnoreCase("gr")) {
@@ -292,7 +314,7 @@ public class PayDay extends JavaPlugin {
                 sender.sendMessage(ChatColor.RED+"Invalid format, see help");
             }
 
-        } else if (l >= 1 && (args[0].equalsIgnoreCase("move") || args[0].equalsIgnoreCase("mv"))) {
+        } else if ((args[0].equalsIgnoreCase("move") || args[0].equalsIgnoreCase("mv"))) {
             // Moves all players from one group to another - even if the group you're moving from does
             // no longer exist
             if (l == 3) {
@@ -313,7 +335,7 @@ public class PayDay extends JavaPlugin {
                     }
                 }
             }
-        } else if (l >= 1 && (args[0].equalsIgnoreCase("delete") || args[0].equalsIgnoreCase("d"))) {
+        } else if ((args[0].equalsIgnoreCase("delete") || args[0].equalsIgnoreCase("d"))) {
             // deletes either a player or a group
             if (l == 3) {
                 if (args[1].equalsIgnoreCase("group") || args[1].equalsIgnoreCase("gr")) {
@@ -780,6 +802,13 @@ public class PayDay extends JavaPlugin {
                 payDay(null, args, pay);
                 if (mode < 0) {
                     prev = tmp;
+                }
+            }
+            double interest = conf.getDouble("interest", 0.0);
+            if (failedSoFar == 0 && Math.abs(interest) > 0.00000001) {
+                LinkedHashMap<String, Double> econ = iConomy.Accounts.ranking(iConomy.Accounts.values().size());
+                for ( String pl : econ.keySet() ) {
+                    iConomy.getAccount(pl).getHoldings().add(econ.get(pl)*(Math.pow(1+interest/100,pay) - 1));
                 }
             }
             if (failedSoFar > 0) {
