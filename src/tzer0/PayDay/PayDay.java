@@ -17,6 +17,7 @@ import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.util.config.Configuration;
 
 import com.iConomy.iConomy;
+import com.iConomy.system.Holdings;
 import com.nijiko.permissions.PermissionHandler;
 import com.nijikokun.bukkit.Permissions.Permissions;
 
@@ -246,7 +247,7 @@ public class PayDay extends JavaPlugin {
             }
             sender.sendMessage(ChatColor.GREEN + String.format("Interest is set to %.5f.", conf.getDouble("interest",0.0)));
         }else if ((args[0].equalsIgnoreCase("lastperiodmode") || args[0].equalsIgnoreCase("lpm"))) {
-            
+
             // Attempts to pay out the predefined amounts of cash, fails before paying out anything if
             // the config is incorrect
             if (l == 2) {
@@ -617,7 +618,11 @@ public class PayDay extends JavaPlugin {
                 pay = filtered;
             }
             for (String pl : pay) {
-                iConomy.getAccount(pl).getHoldings().add(times * conf.getInt("groups."+conf.getString("players."+pl, "none"),0));
+                Holdings acc = iConomy.getAccount(pl).getHoldings();
+                acc.add(times * conf.getInt("groups."+conf.getString("players."+pl, "none"),0));
+                if (acc.balance() < 0) {
+                    acc.set(0);
+                }
             }
         } else {
             if (sendMsg) {
