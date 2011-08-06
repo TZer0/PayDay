@@ -23,6 +23,9 @@ import com.iConomy.system.Holdings;
 import com.nijiko.permissions.PermissionHandler;
 import com.nijikokun.bukkit.Permissions.Permissions;
 
+// Before anyone mentions it: 
+// Yes, I know this code includes a stupid hack when it comes to iConomy.
+
 public class PayDay extends JavaPlugin {
     public PermissionHandler permissions;
     PluginDescriptionFile pdfFile;
@@ -161,7 +164,10 @@ public class PayDay extends JavaPlugin {
         } else if ((args[0].equalsIgnoreCase("time") || (args[0].equalsIgnoreCase("t")))) {
             timeToPayDay(sender);
         } else if ((args[0].equalsIgnoreCase("sync") || (args[0].equalsIgnoreCase("sy")))) {
-            if (permissions == null) {
+            if (conf.getBoolean("essentials", false)) {
+                sender.sendMessage(ChatColor.RED + "Using essentials: unable to sync.");
+                return true;
+            } else if (permissions == null) {
                 sender.sendMessage(ChatColor.RED + "Permissions unavailable - aborting.");
             } else {
                 boolean overwrite = (l == 2 && (args[1].equalsIgnoreCase("overwrite") || args[1].equalsIgnoreCase("ow")));
@@ -687,34 +693,37 @@ public class PayDay extends JavaPlugin {
             return true;
         }
         for (String pl : keys) {
+            String rpl = pl.replaceAll("<dot>", ".");
             if (pl.contains("town-") || pl.contains("nation-")) {
                 if (sendMsg) {
-                    sender.sendMessage(ChatColor.YELLOW + pl + " may be a town or a nation.");
+                    sender.sendMessage(ChatColor.YELLOW + rpl + " may be a town or a nation.");
                 }
             }
-            if ((useEss && ess.getOfflineUser(pl) == null) || (!useEss && !iConomy.hasAccount(pl))) {
+            if ((useEss && ess.getOfflineUser(rpl) == null) || (!useEss && !iConomy.hasAccount(rpl))) {
                 boolean notFound = true;
                 String corr = "";
                 if (sendMsg) {
-                    sender.sendMessage(ChatColor.RED+String.format("%s doesn't have an account!", pl));
+                    sender.sendMessage(ChatColor.RED+String.format("%s doesn't have an account!", rpl));
                 }
                 if (!useEss) {
                     for (String acc : iConomy.Accounts.ranking(iConomy.Accounts.values().size()).keySet()) {
-                        if (acc.equalsIgnoreCase(pl)) {
+                        if (acc.replaceAll("<dot>","").equalsIgnoreCase(rpl)) {
                             conf.setProperty("players."+acc, conf.getProperty("players."+pl));
                             conf.removeProperty("players."+pl);
                             conf.save();
-                            corr = acc;
+                            corr = acc.replaceAll("<dot>", ".");
                             notFound = false;
                             if (sendMsg) {
-                                sender.sendMessage(ChatColor.GREEN + String.format("Corrected case for %s to %s.", pl, corr));
+                                sender.sendMessage(ChatColor.GREEN + String.format("Corrected case for %s to %s.", rpl, corr));
                             }
                             pl = acc;
                             break;
                         }
                     }
                 } else {
-                    sender.sendMessage(ChatColor.RED + "Using essentials. Unable to check for case mis-match!");
+                    if (sendMsg) {
+                        sender.sendMessage(ChatColor.YELLOW + "Warning: Using essentials. Unable to check for case mismatch!");
+                    }
                 }
                 if (notFound) {
                     failed = true;
@@ -722,7 +731,8 @@ public class PayDay extends JavaPlugin {
             }
             if (!groups.contains(conf.getString("players."+pl))) {
                 if (sendMsg) {
-                    sender.sendMessage(ChatColor.RED+String.format("%s belongs to an invalid group - %s", pl, conf.getString("players."+pl)));
+                    sender.sendMessage(ChatColor.RED+String.format("%s belongs to an invalid group - %s", 
+                            rpl, conf.getString("players."+pl).replaceAll("<dot>", ".")));
                 }
                 failed = true;
             }
@@ -796,6 +806,7 @@ public class PayDay extends JavaPlugin {
     class Payer extends Thread {
         public void run() {
             Essentials ess = (Essentials) getServer().getPluginManager().getPlugin("Essentials");
+            boolean useEss = conf.getBoolean("essentials", false);
             if (mode == 0) {
                 return;
             }
@@ -833,10 +844,17 @@ public class PayDay extends JavaPlugin {
             }
             double interest = conf.getDouble("interest", 0.0);
             if (failedSoFar == 0 && Math.abs(interest) > 0.00000001) {
-                LinkedHashMap<String, Double> econ = iConomy.Accounts.ranking(iConomy.Accounts.values().size());
-                //here!
-                for ( String pl : econ.keySet() ) {
-                    if (conf.getBoolean("essentials", false)) {
+                String keys[] = null;
+                LinkedHashMap<String, Double> econ = null;
+                if (useEss) {
+                    keys = conf.getStringList("players.", null).toArray(keys);
+                } else {
+                    econ = iConomy.Accounts.ranking(iConomy.Accounts.values().size());
+                    keys = econ.keySet().toArray(keys);
+                }
+                for ( String pl : keys ) {
+                    pl = pl.replaceAll("<dot>", ".");
+                    if (useEss) {
                         ess.getOfflineUser(pl).giveMoney(ess.getOfflineUser(pl).getMoney()*(Math.pow(1+interest/100, pay) -1));
                     } else {
                         iConomy.getAccount(pl).getHoldings().add(econ.get(pl)*(Math.pow(1+interest/100,pay) - 1));
