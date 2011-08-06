@@ -16,6 +16,8 @@ import org.bukkit.plugin.PluginDescriptionFile;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.util.config.Configuration;
 
+import com.earth2me.essentials.Essentials;
+import com.earth2me.essentials.User;
 import com.iConomy.iConomy;
 import com.iConomy.system.Holdings;
 import com.nijiko.permissions.PermissionHandler;
@@ -42,6 +44,7 @@ public class PayDay extends JavaPlugin {
     public void onEnable() {
         pdfFile = this.getDescription();
         conf = getConfiguration();
+        conf.save();
         failedSoFar = conf.getInt("failedSoFar", 0);
         prev = Calendar.getInstance();
         String []args = new String[3];
@@ -166,6 +169,7 @@ public class PayDay extends JavaPlugin {
                     conf.removeProperty("players.");
                 }
                 for (String key: iConomy.Accounts.ranking(iConomy.Accounts.values().size()).keySet()) {
+                    key = key.replaceAll(".","<dot>");
                     if (key.contains("town-") || key.contains("nation-")) {
                         continue;
                     }
@@ -292,6 +296,7 @@ public class PayDay extends JavaPlugin {
                         sender.sendMessage("Invalid value.");
                     }
                 } else if (args[1].equalsIgnoreCase("player") || args[1].equalsIgnoreCase("pl")) {
+                    uargs[2] = uargs[2].replaceAll(".", "<dot>");
                     if (conf.getKeys("players.") != null) {
                         for (String pl : conf.getKeys("players.")) {
                             if (pl.equalsIgnoreCase(uargs[2])) {
@@ -537,6 +542,7 @@ public class PayDay extends JavaPlugin {
 
 
     public void payDay(CommandSender sender, String []args, int times) {
+        Essentials ess = (Essentials) getServer().getPluginManager().getPlugin("Essentials");
         int l = args.length;
         String[] uargs = new String[l];
         boolean sendMsg = sender != null;
@@ -618,10 +624,19 @@ public class PayDay extends JavaPlugin {
                 pay = filtered;
             }
             for (String pl : pay) {
-                Holdings acc = iConomy.getAccount(pl).getHoldings();
-                acc.add(times * conf.getInt("groups."+conf.getString("players."+pl, "none"),0));
-                if (acc.balance() < 0) {
-                    acc.set(0);
+                int payment = times * conf.getInt("groups."+conf.getString("players."+pl.replaceAll(".", "<dot>"), "none"),0);
+                if (conf.getBoolean("essentials", false)) {
+                    User us = ess.getOfflineUser(pl);
+                    us.giveMoney(payment);
+                    if (us.getMoney() < 0) {
+                        us.setMoney(0);
+                    }
+                } else {
+                    Holdings acc = iConomy.getAccount(pl).getHoldings();
+                    acc.add(payment);
+                    if (acc.balance() < 0) {
+                        acc.set(0);
+                    }
                 }
             }
         } else {
@@ -651,6 +666,8 @@ public class PayDay extends JavaPlugin {
      * @return
      */
     public boolean checkErrors(CommandSender sender) {
+        Essentials ess = (Essentials) getServer().getPluginManager().getPlugin("Essentials");
+        boolean useEss = conf.getBoolean("essentials", false);
         boolean sendMsg = sender != null;
         conf.setProperty("lastFailed", false);
         conf.save();
@@ -675,25 +692,29 @@ public class PayDay extends JavaPlugin {
                     sender.sendMessage(ChatColor.YELLOW + pl + " may be a town or a nation.");
                 }
             }
-            if (!iConomy.hasAccount(pl)) {
+            if ((useEss && ess.getOfflineUser(pl) == null) || (!useEss && !iConomy.hasAccount(pl))) {
                 boolean notFound = true;
                 String corr = "";
                 if (sendMsg) {
                     sender.sendMessage(ChatColor.RED+String.format("%s doesn't have an account!", pl));
                 }
-                for (String acc : iConomy.Accounts.ranking(iConomy.Accounts.values().size()).keySet()) {
-                    if (acc.equalsIgnoreCase(pl)) {
-                        conf.setProperty("players."+acc, conf.getProperty("players."+pl));
-                        conf.removeProperty("players."+pl);
-                        conf.save();
-                        corr = acc;
-                        notFound = false;
-                        if (sendMsg) {
-                            sender.sendMessage(ChatColor.GREEN + String.format("Corrected case for %s to %s.", pl, corr));
+                if (!useEss) {
+                    for (String acc : iConomy.Accounts.ranking(iConomy.Accounts.values().size()).keySet()) {
+                        if (acc.equalsIgnoreCase(pl)) {
+                            conf.setProperty("players."+acc, conf.getProperty("players."+pl));
+                            conf.removeProperty("players."+pl);
+                            conf.save();
+                            corr = acc;
+                            notFound = false;
+                            if (sendMsg) {
+                                sender.sendMessage(ChatColor.GREEN + String.format("Corrected case for %s to %s.", pl, corr));
+                            }
+                            pl = acc;
+                            break;
                         }
-                        pl = acc;
-                        break;
                     }
+                } else {
+                    sender.sendMessage(ChatColor.RED + "Using essentials. Unable to check for case mis-match!");
                 }
                 if (notFound) {
                     failed = true;
@@ -774,6 +795,7 @@ public class PayDay extends JavaPlugin {
     }
     class Payer extends Thread {
         public void run() {
+            Essentials ess = (Essentials) getServer().getPluginManager().getPlugin("Essentials");
             if (mode == 0) {
                 return;
             }
@@ -812,8 +834,13 @@ public class PayDay extends JavaPlugin {
             double interest = conf.getDouble("interest", 0.0);
             if (failedSoFar == 0 && Math.abs(interest) > 0.00000001) {
                 LinkedHashMap<String, Double> econ = iConomy.Accounts.ranking(iConomy.Accounts.values().size());
+                //here!
                 for ( String pl : econ.keySet() ) {
-                    iConomy.getAccount(pl).getHoldings().add(econ.get(pl)*(Math.pow(1+interest/100,pay) - 1));
+                    if (conf.getBoolean("essentials", false)) {
+                        ess.getOfflineUser(pl).giveMoney(ess.getOfflineUser(pl).getMoney()*(Math.pow(1+interest/100, pay) -1));
+                    } else {
+                        iConomy.getAccount(pl).getHoldings().add(econ.get(pl)*(Math.pow(1+interest/100,pay) - 1));
+                    }
                 }
             }
             if (failedSoFar > 0) {
