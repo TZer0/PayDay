@@ -130,14 +130,14 @@ public class PayDay extends JavaPlugin {
                 sender.sendMessage(ChatColor.YELLOW+"time " + ChatColor.GREEN + "- shows how long it is to the next payday");
                 sender.sendMessage(ChatColor.YELLOW+"interest [value] " + ChatColor.GREEN + "- sets or shows interest");
                 sender.sendMessage(ChatColor.YELLOW+"worldconf [worldname] " + ChatColor.GREEN + "- sets or shows selected world");
-                sender.sendMessage(ChatColor.YELLOW+"help 2 for aliases (very useful), help 3 for schedules");
+                sender.sendMessage(ChatColor.YELLOW+"help 2 for aliases (very useful), help 3 for sched, 4 for essentials");
             } else if (page == 2) {
                 sender.sendMessage(ChatColor.YELLOW+"Aliases:");
                 sender.sendMessage(ChatColor.YELLOW+"player = pl, players = pl, groups = gr");
                 sender.sendMessage(ChatColor.YELLOW+"group = gr, checkerrors = ce, payday = pd");
                 sender.sendMessage(ChatColor.YELLOW+"set = s, delete = d, move = mv, t = time");
                 sender.sendMessage(ChatColor.YELLOW+"sync = sy, overwrite = ow, searchdelete = sd");
-                sender.sendMessage(ChatColor.YELLOW+"message = msg");
+                sender.sendMessage(ChatColor.YELLOW+"message = msg, essentials = ess");
                 sender.sendMessage(ChatColor.YELLOW+"interest = i, worldconf = wc");
                 sender.sendMessage(ChatColor.YELLOW+"recurring = rec, onlinemode = om, lastperiodmode = lpm");
                 sender.sendMessage(ChatColor.YELLOW+"Example usage:");
@@ -156,11 +156,24 @@ public class PayDay extends JavaPlugin {
                 sender.sendMessage(ChatColor.YELLOW+"h = hour, d = day, w = week, m = month");
                 sender.sendMessage(ChatColor.YELLOW+"s will always happen on the first minute of the hour, month,");
                 sender.sendMessage(ChatColor.YELLOW+"day or week.");
+            } else if (page == 4) {
+                sender.sendMessage(ChatColor.RED + "WARNING: THIS IS NOT DONE, YOU MAY ENCOUNTER ISSUES!");
+                sender.sendMessage(ChatColor.YELLOW + "To eanble essentials-support, run this command:");
+                sender.sendMessage(ChatColor.YELLOW + "/pd essentials true");
+                sender.sendMessage(ChatColor.YELLOW + "To disable:");
+                sender.sendMessage(ChatColor.YELLOW + "/pd essentials false");
+                sender.sendMessage(ChatColor.RED + "Note: while essentials-support is enabled, sync is unavailable!");
             } else {
                 sender.sendMessage(ChatColor.YELLOW + "No such help-page!");
             }
             return true;
 
+        } else if ((args[0].equalsIgnoreCase("essentials") || (args[0].equalsIgnoreCase("ess")))) {
+            if (l >= 2) {
+                conf.setProperty("essentials", args[1].equalsIgnoreCase("t") || 
+                       args[1].equalsIgnoreCase("true") );
+            }
+            sender.sendMessage(ChatColor.GREEN + "Essentials is set to " + conf.getBoolean("essentials", false));
         } else if ((args[0].equalsIgnoreCase("time") || (args[0].equalsIgnoreCase("t")))) {
             timeToPayDay(sender);
         } else if ((args[0].equalsIgnoreCase("message") || (args[0].equalsIgnoreCase("msg")))) {
@@ -176,7 +189,7 @@ public class PayDay extends JavaPlugin {
                 return true;
             } else if (permissions == null) {
                 sender.sendMessage(ChatColor.RED + "Permissions unavailable - aborting.");
-            } else {
+            } else { 
                 boolean overwrite = (l == 2 && (args[1].equalsIgnoreCase("overwrite") || args[1].equalsIgnoreCase("ow")));
                 if (overwrite) {
                     conf.removeProperty("players.");
