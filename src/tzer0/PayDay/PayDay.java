@@ -162,6 +162,13 @@ public class PayDay extends JavaPlugin {
 
         } else if ((args[0].equalsIgnoreCase("time") || (args[0].equalsIgnoreCase("t")))) {
             timeToPayDay(sender);
+        } else if ((args[0].equalsIgnoreCase("message") || (args[0].equalsIgnoreCase("msg")))) {
+            if (l != 1) {
+                conf.setProperty("message", uargs[1]);
+                conf.save();
+            }
+            sender.sendMessage(ChatColor.GREEN + "Current pay day-message: " + 
+                    ChatColor.GOLD + conf.getString("message", "It is pay day!"));
         } else if ((args[0].equalsIgnoreCase("sync") || (args[0].equalsIgnoreCase("sy")))) {
             if (conf.getBoolean("essentials", false)) {
                 sender.sendMessage(ChatColor.RED + "Using essentials: unable to sync.");
@@ -605,7 +612,8 @@ public class PayDay extends JavaPlugin {
         if (times != 1) {
             timesString = "x"+times;
         }
-        getServer().broadcastMessage(ChatColor.GOLD+"It is Pay Day!"+timesString);
+        getServer().broadcastMessage(ChatColor.GOLD+ 
+                conf.getString("message", "It is Pay Day!")+timesString);
 
         if (l <= 3 || l == 1) {
             if (conf.getBoolean("lastperiod", false)) {
