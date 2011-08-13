@@ -103,7 +103,6 @@ public class PayDay extends JavaPlugin {
         }
         String[] args = new String[uargs.length];
         for (int i = 0; i < args.length; i++) {
-            uargs[i] = uargs[i].replace(".", "");
             args[i] = uargs[i].toLowerCase();
         }
         int l = args.length;
@@ -175,7 +174,7 @@ public class PayDay extends JavaPlugin {
                     conf.removeProperty("players.");
                 }
                 for (String key: iConomy.Accounts.ranking(iConomy.Accounts.values().size()).keySet()) {
-                    key = key.replaceAll(".","<dot>");
+                    key = key.replaceAll("\\.","<dot>");
                     if (key.contains("town-") || key.contains("nation-")) {
                         continue;
                     }
@@ -302,7 +301,7 @@ public class PayDay extends JavaPlugin {
                         sender.sendMessage("Invalid value.");
                     }
                 } else if (args[1].equalsIgnoreCase("player") || args[1].equalsIgnoreCase("pl")) {
-                    uargs[2] = uargs[2].replaceAll(".", "<dot>");
+                    uargs[2] = uargs[2].replaceAll("\\.", "<dot>");
                     if (conf.getKeys("players.") != null) {
                         for (String pl : conf.getKeys("players.")) {
                             if (pl.equalsIgnoreCase(uargs[2])) {
@@ -359,6 +358,7 @@ public class PayDay extends JavaPlugin {
                         return true;
                     }
                 } else if (args[1].equalsIgnoreCase("player") || args[1].equalsIgnoreCase("pl")) {
+                    uargs[2] = uargs[2].replaceAll("\\.", "<dot>");
                     if (conf.getString("players."+uargs[2]) != null) {
                         conf.removeProperty("players."+uargs[2]);
                         conf.save();
@@ -630,15 +630,15 @@ public class PayDay extends JavaPlugin {
                 pay = filtered;
             }
             for (String pl : pay) {
-                int payment = times * conf.getInt("groups."+conf.getString("players."+pl.replaceAll(".", "<dot>"), "none"),0);
+                int payment = times * conf.getInt("groups."+conf.getString("players."+pl, "none"),0);
                 if (conf.getBoolean("essentials", false)) {
-                    User us = ess.getOfflineUser(pl);
+                    User us = ess.getOfflineUser(pl.replaceAll("<dot>", "."));
                     us.giveMoney(payment);
                     if (us.getMoney() < 0) {
                         us.setMoney(0);
                     }
                 } else {
-                    Holdings acc = iConomy.getAccount(pl).getHoldings();
+                    Holdings acc = iConomy.getAccount(pl.replaceAll("<dot>", ".")).getHoldings();
                     acc.add(payment);
                     if (acc.balance() < 0) {
                         acc.set(0);
@@ -707,7 +707,7 @@ public class PayDay extends JavaPlugin {
                 }
                 if (!useEss) {
                     for (String acc : iConomy.Accounts.ranking(iConomy.Accounts.values().size()).keySet()) {
-                        if (acc.replaceAll("<dot>","").equalsIgnoreCase(rpl)) {
+                        if (acc.replaceAll("<dot>",".").equalsIgnoreCase(rpl)) {
                             conf.setProperty("players."+acc, conf.getProperty("players."+pl));
                             conf.removeProperty("players."+pl);
                             conf.save();
@@ -752,7 +752,8 @@ public class PayDay extends JavaPlugin {
         if (items != null && page*10 < items.size()) {
             sender.sendMessage(String.format("Listing %ss, page %d of %d", node, page, (items.size()-1)/10+1));
             for (int i = page*10; i < Math.min(items.size(), page*10+10); i++) {
-                sender.sendMessage(items.get(i) + " - " + conf.getString(node.toLowerCase()+"s."+items.get(i), "error"));
+                sender.sendMessage(items.get(i).replaceAll("<dot>", ".") + " - " + 
+                        conf.getString(node.toLowerCase()+"s."+items.get(i), "error"));
             }
             if (items.size() > page*10+10) {
                 sender.sendMessage(String.format("/pd %ss %d for next page", node, page+1));
