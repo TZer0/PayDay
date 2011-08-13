@@ -117,8 +117,8 @@ public class PayDay extends JavaPlugin {
                 sender.sendMessage(ChatColor.YELLOW+"checkerrors " + ChatColor.GREEN + "- checks for errors in the config-file");
                 sender.sendMessage(ChatColor.YELLOW+"players [#] " + ChatColor.GREEN + "- shows number # page in the list of players");
                 sender.sendMessage(ChatColor.YELLOW+"groups [#] " + ChatColor.GREEN + "- shows number # page in the list of groups");
-                sender.sendMessage(ChatColor.YELLOW+"payday " + ChatColor.GREEN + "- pays everyone their money, won't run if (ce) fails");
-                sender.sendMessage(ChatColor.YELLOW+"payday [#] " + ChatColor.GREEN + "- same as above, but pays # times.");
+                sender.sendMessage(ChatColor.YELLOW+"payday [#] " + ChatColor.GREEN + "- initiates a pay day");
+                sender.sendMessage(ChatColor.YELLOW+"message [#] " + ChatColor.GREEN + "- set or displays pay day message");
                 sender.sendMessage(ChatColor.YELLOW+"set group name value " + ChatColor.GREEN + "- creates a group");
                 sender.sendMessage(ChatColor.YELLOW+"set player name groupname " + ChatColor.GREEN + "- assigns a player to a group");
                 sender.sendMessage(ChatColor.YELLOW+"move groupname1 groupname2 " + ChatColor.GREEN + "- moves all players");
@@ -137,6 +137,7 @@ public class PayDay extends JavaPlugin {
                 sender.sendMessage(ChatColor.YELLOW+"group = gr, checkerrors = ce, payday = pd");
                 sender.sendMessage(ChatColor.YELLOW+"set = s, delete = d, move = mv, t = time");
                 sender.sendMessage(ChatColor.YELLOW+"sync = sy, overwrite = ow, searchdelete = sd");
+                sender.sendMessage(ChatColor.YELLOW+"message = msg");
                 sender.sendMessage(ChatColor.YELLOW+"interest = i, worldconf = wc");
                 sender.sendMessage(ChatColor.YELLOW+"recurring = rec, onlinemode = om, lastperiodmode = lpm");
                 sender.sendMessage(ChatColor.YELLOW+"Example usage:");
