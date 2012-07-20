@@ -1,9 +1,11 @@
 package tzer0.PayDay;
 
 import java.util.Calendar;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Set;
 
 import org.bukkit.ChatColor;
 import org.bukkit.command.Command;
@@ -35,9 +37,11 @@ public class PayDay extends JavaPlugin {
     int relative;
     long mode;
     Calendar prev;
-    public iConomy iConomy = null;
+    public iConomy iConomy;
+    public Essentials ess;
     LinkedList<String> onlineLastPeriod;
     int failedSoFar;
+    boolean newPermissions;
     @Override
     public void onDisable() {
         getServer().getScheduler().cancelTasks(this);
@@ -45,9 +49,10 @@ public class PayDay extends JavaPlugin {
 
     @Override
     public void onEnable() {
+        reloadPlugins();
         pdfFile = this.getDescription();
         conf = getConfiguration();
-        conf.save();
+        newPermissions = conf.getBoolean("newpermissions", false);
         failedSoFar = conf.getInt("failedSoFar", 0);
         prev = Calendar.getInstance();
         String []args = new String[3];
@@ -62,6 +67,11 @@ public class PayDay extends JavaPlugin {
         onlineLastPeriod = new LinkedList<String>();
         System.out.println(pdfFile.getName() + " version "
                 + pdfFile.getVersion() + " is enabled!");
+    }
+
+    public void reloadPlugins() {
+        ess = (Essentials) getServer().getPluginManager().getPlugin("Essentials");
+        iConomy = (iConomy) getServer().getPluginManager().getPlugin("iConomy");
     }
 
     public boolean onCommand(CommandSender sender, Command cmd,
@@ -171,7 +181,7 @@ public class PayDay extends JavaPlugin {
         } else if ((args[0].equalsIgnoreCase("essentials") || (args[0].equalsIgnoreCase("ess")))) {
             if (l >= 2) {
                 conf.setProperty("essentials", args[1].equalsIgnoreCase("t") || 
-                       args[1].equalsIgnoreCase("true") );
+                        args[1].equalsIgnoreCase("true") );
             }
             sender.sendMessage(ChatColor.GREEN + "Essentials is set to " + conf.getBoolean("essentials", false));
         } else if ((args[0].equalsIgnoreCase("time") || (args[0].equalsIgnoreCase("t")))) {
@@ -190,11 +200,12 @@ public class PayDay extends JavaPlugin {
             } else if (permissions == null) {
                 sender.sendMessage(ChatColor.RED + "Permissions unavailable - aborting.");
             } else { 
+                String worldname = conf.getString("worldconf", "world");
                 boolean overwrite = (l == 2 && (args[1].equalsIgnoreCase("overwrite") || args[1].equalsIgnoreCase("ow")));
                 if (overwrite) {
                     conf.removeProperty("players.");
                 }
-                for (String key: iConomy.Accounts.ranking(iConomy.Accounts.values().size()).keySet()) {
+                for (String key: getEconomyUsers(sender)) {
                     key = key.replaceAll("\\.","<dot>");
                     if (key.contains("town-") || key.contains("nation-")) {
                         continue;
@@ -211,10 +222,10 @@ public class PayDay extends JavaPlugin {
                             }
                         }
                         if (!found) {
-                            String worldname = conf.getString("worldconf", "world");
-                            conf.setProperty("players."+key, permissions.getPrimaryGroup(worldname, key).toLowerCase());
-                            if (conf.getString("groups."+permissions.getPrimaryGroup(worldname, key).toLowerCase()) == null) {
-                                conf.setProperty("groups."+permissions.getPrimaryGroup(worldname, key).toLowerCase(), 0);
+                            String grp = getMainGroup(worldname, key, sender).toLowerCase();
+                            conf.setProperty("players."+key, grp);
+                            if (conf.getString("groups."+grp) == null) {
+                                conf.setProperty("groups."+grp, 0);
                             }
                         }
                     }
@@ -652,20 +663,9 @@ public class PayDay extends JavaPlugin {
                 pay = filtered;
             }
             for (String pl : pay) {
+                pl = pl.replaceAll("<dot>", "."); 
                 int payment = times * conf.getInt("groups."+conf.getString("players."+pl, "none"),0);
-                if (conf.getBoolean("essentials", false)) {
-                    User us = ess.getOfflineUser(pl.replaceAll("<dot>", "."));
-                    us.giveMoney(payment);
-                    if (us.getMoney() < 0) {
-                        us.setMoney(0);
-                    }
-                } else {
-                    Holdings acc = iConomy.getAccount(pl.replaceAll("<dot>", ".")).getHoldings();
-                    acc.add(payment);
-                    if (acc.balance() < 0) {
-                        acc.set(0);
-                    }
-                }
+                modMoney(pl, payment, sender);
             }
         } else {
             if (sendMsg) {
@@ -695,7 +695,6 @@ public class PayDay extends JavaPlugin {
      */
     public boolean checkErrors(CommandSender sender) {
         Essentials ess = (Essentials) getServer().getPluginManager().getPlugin("Essentials");
-        boolean useEss = conf.getBoolean("essentials", false);
         boolean sendMsg = sender != null;
         conf.setProperty("lastFailed", false);
         conf.save();
@@ -721,30 +720,24 @@ public class PayDay extends JavaPlugin {
                     sender.sendMessage(ChatColor.YELLOW + rpl + " may be a town or a nation.");
                 }
             }
-            if ((useEss && ess.getOfflineUser(rpl) == null) || (!useEss && !iConomy.hasAccount(rpl))) {
+            if (!hasAccount(rpl, sender)) {
                 boolean notFound = true;
                 String corr = "";
                 if (sendMsg) {
                     sender.sendMessage(ChatColor.RED+String.format("%s doesn't have an account!", rpl));
                 }
-                if (!useEss) {
-                    for (String acc : iConomy.Accounts.ranking(iConomy.Accounts.values().size()).keySet()) {
-                        if (acc.replaceAll("<dot>",".").equalsIgnoreCase(rpl)) {
-                            conf.setProperty("players."+acc, conf.getProperty("players."+pl));
-                            conf.removeProperty("players."+pl);
-                            conf.save();
-                            corr = acc.replaceAll("<dot>", ".");
-                            notFound = false;
-                            if (sendMsg) {
-                                sender.sendMessage(ChatColor.GREEN + String.format("Corrected case for %s to %s.", rpl, corr));
-                            }
-                            pl = acc;
-                            break;
+                for (String acc : getEconomyUsers(sender)) {
+                    if (acc.replaceAll("<dot>",".").equalsIgnoreCase(rpl)) {
+                        conf.setProperty("players."+acc, conf.getProperty("players."+pl));
+                        conf.removeProperty("players."+pl);
+                        conf.save();
+                        corr = acc.replaceAll("<dot>", ".");
+                        notFound = false;
+                        if (sendMsg) {
+                            sender.sendMessage(ChatColor.GREEN + String.format("Corrected case for %s to %s.", rpl, corr));
                         }
-                    }
-                } else {
-                    if (sendMsg) {
-                        sender.sendMessage(ChatColor.YELLOW + "Warning: Using essentials. Unable to check for case mismatch!");
+                        pl = acc;
+                        break;
                     }
                 }
                 if (notFound) {
@@ -828,7 +821,6 @@ public class PayDay extends JavaPlugin {
     }
     class Payer extends Thread {
         public void run() {
-            Essentials ess = (Essentials) getServer().getPluginManager().getPlugin("Essentials");
             boolean useEss = conf.getBoolean("essentials", false);
             if (mode == 0) {
                 return;
@@ -867,21 +859,17 @@ public class PayDay extends JavaPlugin {
             }
             double interest = conf.getDouble("interest", 0.0);
             if (failedSoFar == 0 && Math.abs(interest) > 0.00000001) {
-                String keys[] = null;
+                String keys[] = {};
                 LinkedHashMap<String, Double> econ = null;
                 if (useEss) {
                     keys = conf.getStringList("players.", null).toArray(keys);
                 } else {
                     econ = iConomy.Accounts.ranking(iConomy.Accounts.values().size());
-                    keys = econ.keySet().toArray(keys);
+                    keys = econ.keySet().toArray(keys); 
                 }
                 for ( String pl : keys ) {
                     pl = pl.replaceAll("<dot>", ".");
-                    if (useEss) {
-                        ess.getOfflineUser(pl).giveMoney(ess.getOfflineUser(pl).getMoney()*(Math.pow(1+interest/100, pay) -1));
-                    } else {
-                        iConomy.getAccount(pl).getHoldings().add(econ.get(pl)*(Math.pow(1+interest/100,pay) - 1));
-                    }
+                    modMoney(pl, getMoney(pl, null)*(Math.pow(1+interest/100,pay) - 1), null);
                 }
             }
             if (failedSoFar > 0) {
@@ -897,4 +885,76 @@ public class PayDay extends JavaPlugin {
             }
         }
     }
+
+    public double getMoney(String pl, CommandSender snd) {
+        if (iConomy != null) {
+            return iConomy.getAccount(pl).getHoldings().balance();
+        } else if (ess != null) {
+            return ess.getOfflineUser(pl).getMoney();
+        } else {
+            if (snd != null) {
+                snd.sendMessage(ChatColor.RED + "No economy-plugin detected.");
+            }
+            return -1;
+        }
+    }
+
+    public void modMoney(String pl, double value, CommandSender snd) {
+        if (iConomy != null) {
+            iConomy.getAccount(pl).getHoldings().add(value);
+        } else if (ess != null) {
+            ess.getOfflineUser(pl).giveMoney(value);
+        } else {
+            if (snd != null) {
+                snd.sendMessage(ChatColor.RED + "No economy-plugin detected.");
+            }
+        }
+    }
+    public void setMoney(String pl, double value, CommandSender snd) {
+        if (iConomy != null) {
+            iConomy.getAccount(pl).getHoldings().set(value);
+        } else if (ess != null) {
+            ess.getOfflineUser(pl).setMoney(value);
+        } else {
+            if (snd != null) {
+                snd.sendMessage(ChatColor.RED + "No economy-plugin detected.");
+            }
+        }
+    }
+
+    public Set<String> getEconomyUsers(CommandSender snd) {
+        if (iConomy != null) {
+            return iConomy.Accounts.ranking(iConomy.Accounts.values().size()).keySet();
+        } else if (ess != null) {
+
+            return new HashSet<String>();
+        } else {
+            if (snd != null) {
+                snd.sendMessage(ChatColor.RED + "No economy-plugin detected.");
+            }
+            return null;
+        }
+    }
+
+    public String getMainGroup(String worldname, String pl, CommandSender snd) {
+        if (newPermissions) {
+            return permissions.getPrimaryGroup(worldname, pl);
+        } else {
+            return permissions.getGroup(worldname, pl);
+        }
+    }
+
+    public boolean hasAccount(String pl, CommandSender snd) {
+        if (iConomy != null) {
+            return iConomy.hasAccount(pl);
+        } else if (ess != null) {
+            return ess.getOfflineUser(pl) != null;
+        } else {
+            if (snd != null) {
+                snd.sendMessage(ChatColor.RED + "No economy-plugin detected.");
+            }
+            return false;
+        }
+    }
+
 }
